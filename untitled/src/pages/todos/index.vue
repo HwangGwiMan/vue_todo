@@ -1,6 +1,14 @@
 <template>
   <div>
-    <h2>To-Do List</h2>
+    <div class="d-flex justify-content-between mb-3">
+      <h2>To-Do List</h2>
+      <button
+          class="btn btn-primary"
+          @click="moveToCreatePage"
+      >
+        Create Todo
+      </button>
+    </div>
     <input
         class="form-control"
         type="text"
@@ -9,7 +17,6 @@
         @keyup.enter="searchTodo"
     >
     <hr/>
-    <TodoSimpleForm @add-todo="addTodo"/>
     <div>{{ error }}</div>
     <div v-if="!todos.length">
       There is nothing to display
@@ -19,7 +26,7 @@
         @toggle-todo="toggleTodo"
         @delete-todo="deleteTodo"
     />
-    <hr />
+    <hr/>
     <nav aria-label="Page navigation example">
       <ul class="pagination">
         <li v-if="currentPage !== 1" class="page-item">
@@ -31,8 +38,9 @@
             v-for="page in numberOfPages"
             :key="page"
             class="page-item"
-            :class="currentPage === page ? 'active' : ''">
-          <a style="cursor: pointer" class="page-link" @click="getTodos(page)">{{page}}</a>
+            :class="currentPage === page ? 'active' : ''"
+        >
+          <a style="cursor: pointer" class="page-link" @click="getTodos(page)">{{ page }}</a>
         </li>
         <li v-if="numberOfPages !== currentPage" class="page-item">
           <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage + 1)">Next</a>
@@ -40,6 +48,11 @@
       </ul>
     </nav>
   </div>
+  <Toast
+      v-if="showToast"
+      :message="toastMessage"
+      :type="toastAlertType"
+  />
 </template>
 
 <script>
@@ -47,23 +60,47 @@ import {ref, computed, watch} from "vue";
 import TodoSimpleForm from "@/components/TodoSimpleForm.vue";
 import TodoList from "@/components/TodoList.vue";
 import axios from "axios";
+import {useRouter} from "vue-router";
+
+import {useToast} from "@/composables/toast.js";
+import Toast from "@/components/Toast.vue"
 
 export default {
   components: {
     TodoSimpleForm,
-    TodoList
+    TodoList,
+    Toast
   },
   setup() {
     const error = ref("");
     const todos = ref([]);
     const numberOfTodos = ref(0);
-    const limit =5;
+    const limit = 5;
     const currentPage = ref(1);
     const searchText = ref("");
+    const router = useRouter();
 
     const numberOfPages = computed(() => {
-      return Math.ceil(numberOfTodos.value/limit);
+      return Math.ceil(numberOfTodos.value / limit);
     });
+
+    const {
+      toastMessage,
+      toastAlertType,
+      showToast,
+      triggerToast
+    } = useToast();
+
+    // const triggerToast = (message, type = "success") => {
+    //   toastMessage.value = message;
+    //   toastAlertType.value = type;
+    //   showToast.value = true;
+    //   toastTimeout.value = setTimeout(() => {
+    //     toastMessage.value = "";
+    //     toastAlertType.value = "";
+    //     showToast.value = false;
+    //   }, 3000)
+    // }
 
 
     const getTodos = async (page = currentPage.value) => {
@@ -74,6 +111,7 @@ export default {
         todos.value = res.data;
       } catch (err) {
         error.value = "Something went wrong";
+        triggerToast("Something went wrong", "danger");
       }
     }
 
@@ -89,22 +127,25 @@ export default {
 
       } catch (err) {
         error.value = "Something went wrong";
+        triggerToast("Something went wrong", "danger");
       }
     }
 
-    const deleteTodo = async(index) => {
-      const id = todos.value[index].id;
+    const deleteTodo = async (id) => {
+
       try {
         await axios.delete("http://localhost:3000/todos/" + id);
         getTodos(1);
       } catch (err) {
         console.log(err);
         error.value = "Something went wrong"
+        triggerToast("Something went wrong", "danger");
       }
 
     }
 
     const toggleTodo = async (index, checked) => {
+      console.log(index)
       console.log(checked);
       const id = todos.value[index].id;
       try {
@@ -114,6 +155,7 @@ export default {
         todos.value[index].completed = checked;
       } catch (err) {
         console.log(err);
+        triggerToast("Something went wrong", "danger");
       }
     }
 
@@ -134,6 +176,12 @@ export default {
 
     })
 
+    const moveToCreatePage = () => {
+      router.push({
+        name: "TodoCreate"
+      })
+    }
+
     return {
       todos,
       deleteTodo,
@@ -144,7 +192,12 @@ export default {
       numberOfPages,
       currentPage,
       getTodos,
-      searchTodo
+      searchTodo,
+      toastMessage,
+      toastAlertType,
+      showToast,
+      triggerToast,
+      moveToCreatePage
     };
   }
 }
