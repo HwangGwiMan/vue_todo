@@ -27,41 +27,22 @@
         @delete-todo="deleteTodo"
     />
     <hr/>
-    <nav aria-label="Page navigation example">
-      <ul class="pagination">
-        <li v-if="currentPage !== 1" class="page-item">
-          <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage - 1)">
-            Previous
-          </a>
-        </li>
-        <li
-            v-for="page in numberOfPages"
-            :key="page"
-            class="page-item"
-            :class="currentPage === page ? 'active' : ''"
-        >
-          <a style="cursor: pointer" class="page-link" @click="getTodos(page)">{{ page }}</a>
-        </li>
-        <li v-if="numberOfPages !== currentPage" class="page-item">
-          <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage + 1)">Next</a>
-        </li>
-      </ul>
-    </nav>
+    <Pagination
+        v-if="todos.length"
+        :numberOfPages="numberOfPages"
+        :currentPage = "currentPage"
+        @click ="getTodos"
+    />
   </div>
-  <Toast
-      v-if="showToast"
-      :message="toastMessage"
-      :type="toastAlertType"
-  />
 </template>
 
 <script>
 import {ref, computed, watch} from "vue";
 import TodoSimpleForm from "@/components/TodoSimpleForm.vue";
 import TodoList from "@/components/TodoList.vue";
-import axios from "axios";
+import axios from "@/axios";
 import {useRouter} from "vue-router";
-
+import Pagination from "@/components/Pagination.vue";
 import {useToast} from "@/composables/toast.js";
 import Toast from "@/components/Toast.vue"
 
@@ -69,7 +50,8 @@ export default {
   components: {
     TodoSimpleForm,
     TodoList,
-    Toast
+    Toast,
+    Pagination
   },
   setup() {
     const error = ref("");
@@ -91,22 +73,11 @@ export default {
       triggerToast
     } = useToast();
 
-    // const triggerToast = (message, type = "success") => {
-    //   toastMessage.value = message;
-    //   toastAlertType.value = type;
-    //   showToast.value = true;
-    //   toastTimeout.value = setTimeout(() => {
-    //     toastMessage.value = "";
-    //     toastAlertType.value = "";
-    //     showToast.value = false;
-    //   }, 3000)
-    // }
-
 
     const getTodos = async (page = currentPage.value) => {
       currentPage.value = page;
       try {
-        const res = await axios.get(`http://localhost:3000/todos?subject_like=${searchText.value}&_page=${page}&_limit=${limit}&_sort=id&_order=desc`);
+        const res = await axios.get(`todos?subject_like=${searchText.value}&_page=${page}&_limit=${limit}&_sort=id&_order=desc`);
         numberOfTodos.value = res.headers["x-total-count"];
         todos.value = res.data;
       } catch (err) {
@@ -119,7 +90,7 @@ export default {
 
     const addTodo = async (todo) => {
       try {
-        await axios.post("http://localhost:3000/todos", {
+        await axios.post("todos", {
           subject: todo.subject,
           completed: todo.completed,
         })
@@ -134,7 +105,7 @@ export default {
     const deleteTodo = async (id) => {
 
       try {
-        await axios.delete("http://localhost:3000/todos/" + id);
+        await axios.delete("todos/" + id);
         getTodos(1);
       } catch (err) {
         console.log(err);
@@ -149,7 +120,7 @@ export default {
       console.log(checked);
       const id = todos.value[index].id;
       try {
-        await axios.patch("http://localhost:3000/todos/" + id, {
+        await axios.patch("todos/" + id, {
           completed: checked
         });
         todos.value[index].completed = checked;
